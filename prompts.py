@@ -9,3 +9,12 @@ CHAT_PROMPT = ChatPromptTemplate.from_messages(
         MessagesPlaceholder(variable_name="messages"),
     ]
 )
+
+PING_NOT_RECORDED_ERROR = {
+    "default": "No ping data recorded between {} and {}.",
+    "between": "No ping data recorded between {} and {} from {} to {}.",
+    "after": "No ping data recorded between {} and {} after {}.",
+    "before": "No ping data recorded between {} and {} befpre {}.",
+}
+
+DYNAMODB_QUERY_ERROR = "Error querying DynamoDB: {e}."

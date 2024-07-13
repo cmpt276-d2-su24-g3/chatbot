@@ -1,11 +1,13 @@
 import boto3
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 from langchain.tools import tool
+
+from prompts import DYNAMODB_QUERY_ERROR, PING_NOT_RECORDED_ERROR
 
 
 @tool
 async def query_dynamodb(
-    origin: str = None,
+    source_region: str = None,
     destination: str = None,
     table_name: str = None,
     latest: bool = True,
@@ -16,7 +18,7 @@ async def query_dynamodb(
     Queries AWS DynamoDB tables for latency data between AWS regions or regions and locations.
 
     Parameters:
-    `origin` (str): AWS region code for the origin.
+    `source_region` (str): AWS region code for the source region.
     `destination` (str): AWS region code or city name for the destination.
     `table_name` (str): Name of the DynamoDB table to query.
     `latest` (bool): Set to True for the latest ping data, or False for historical data. Defaults to True.
@@ -29,26 +31,25 @@ async def query_dynamodb(
     Tables Available:
 
     `R2R-Table`: Contains data about the ping between AWS regions.
-    `R2L-Table`: Contains data about the ping between AWS regions and locations.
+    `R2L-Table`: Contains data about the ping between AWS regions and locations. NOT available for now.
     """
     dynamodb = boto3.resource("dynamodb")
 
     table = dynamodb.Table(table_name)
-    key_conditions = Key("origin").eq(origin) & Key(
-        "destination#timestamp"
-    ).begins_with(f"{destination}#")
+    key_conditions = Key("source_region").eq(source_region)
 
     try:
-        filter_expression = None
+        filter_expression = Attr("destination").eq(destination)
+
         if latest is False:
             if start_time and end_time:
-                filter_expression = Key("timestamp").between(start_time, end_time)
+                key_conditions &= Key("timestamp").between(start_time, end_time)
             elif start_time:
-                filter_expression = Key("timestamp").gte(start_time)
+                key_conditions &= Key("timestamp").gte(start_time)
             elif end_time:
-                filter_expression = Key("timestamp").lte(end_time)
+                key_conditions &= Key("timestamp").lte(end_time)
 
-        if filter_expression:
+        if latest is False:
             response = table.query(
                 KeyConditionExpression=key_conditions,
                 FilterExpression=filter_expression,
@@ -56,6 +57,7 @@ async def query_dynamodb(
         else:
             response = table.query(
                 KeyConditionExpression=key_conditions,
+                FilterExpression=filter_expression,
                 ScanIndexForward=False,
                 Limit=1,
             )
@@ -64,13 +66,19 @@ async def query_dynamodb(
             return str(response["Items"])
         else:
             if start_time and end_time:
-                return f"No ping data recorded between {origin} and {destination} from {start_time} to {end_time}."
+                return PING_NOT_RECORDED_ERROR["between"].format(
+                    source_region, destination, start_time, end_time
+                )
             elif start_time:
-                return f"No ping data recorded between {origin} and {destination} after {start_time}."
+                return PING_NOT_RECORDED_ERROR["after"].format(
+                    source_region, destination, start_time
+                )
             elif end_time:
-                return f"No ping data recorded between {origin} and {destination} before {end_time}."
+                return PING_NOT_RECORDED_ERROR["before"].format(
+                    source_region, destination, end_time
+                )
 
-            return f"No ping data recorded between {origin} and {destination}."
+            return PING_NOT_RECORDED_ERROR["default"].format(source_region, destination)
 
     except Exception as e:
-        return f"Error querying DynamoDB: {e}"
+        return DYNAMODB_QUERY_ERROR.format(e)
