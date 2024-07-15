@@ -14,6 +14,7 @@ from starlette.responses import StreamingResponse
 from prompts import CHAT_PROMPT
 from pydantic_models import chat_request_model, history_request_model
 from query import get_nth_ping_given_destination, get_nth_ping_given_source, get_pings
+from timezone import convert_to_utc
 
 TABLE_NAME = "chat_history"
 
@@ -49,7 +50,12 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
 async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
-        [get_nth_ping_given_destination, get_nth_ping_given_source, get_pings]
+        [
+            get_nth_ping_given_destination,
+            get_nth_ping_given_source,
+            get_pings,
+            convert_to_utc,
+        ]
     )
 
     def init_history(session_id: str) -> DynamoDBChatMessageHistory:
@@ -83,6 +89,7 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
                     "get_nth_ping_given_destination": get_nth_ping_given_destination,
                     "get_nth_ping_given_source": get_nth_ping_given_source,
                     "get_ping": get_pings,
+                    "convert_to_utc": convert_to_utc,
                 }
                 selected_tool = tools[tool_call["name"]]
                 tool_args = ast.literal_eval(
