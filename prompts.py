@@ -15,6 +15,9 @@ PING_NOT_RECORDED_ERROR = {
     "between": "No ping data recorded between {} and {} from {} to {}.",
     "after": "No ping data recorded between {} and {} after {}.",
     "before": "No ping data recorded between {} and {} befpre {}.",
+    "single": "No ping data recorded for {}",
 }
 
-DYNAMODB_QUERY_ERROR = "Error querying DynamoDB: {e}."
+NOT_ENOUGH_ENTRY_ERROR = "Not enough data recorded to find the {}th highest/lowest ping, {} deduplicated entries avaiable in the given time range."
+
+DYNAMODB_QUERY_ERROR = "Error querying DynamoDB: {}."

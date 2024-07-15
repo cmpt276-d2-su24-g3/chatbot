@@ -13,7 +13,7 @@ from starlette.responses import StreamingResponse
 
 from prompts import CHAT_PROMPT
 from pydantic_models import chat_request_model, history_request_model
-from query import query_dynamodb
+from query import get_nth_ping_given_destination, get_nth_ping_given_source, get_pings
 
 TABLE_NAME = "chat_history"
 
@@ -48,7 +48,9 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
 @app.post("/test-rag")
 async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
-    llm = llm.bind_tools([query_dynamodb])
+    llm = llm.bind_tools(
+        [get_nth_ping_given_destination, get_nth_ping_given_source, get_pings]
+    )
 
     def init_history(session_id: str) -> DynamoDBChatMessageHistory:
         return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
@@ -77,9 +79,12 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
             tool_messages = []
             for tool_call in gathered.tool_call_chunks:
 
-                selected_tool = {"query_dynamodb": query_dynamodb}[
-                    tool_call["name"].lower()
-                ]
+                tools = {
+                    "get_nth_ping_given_destination": get_nth_ping_given_destination,
+                    "get_nth_ping_given_source": get_nth_ping_given_source,
+                    "get_ping": get_pings,
+                }
+                selected_tool = tools[tool_call["name"]]
                 tool_args = ast.literal_eval(
                     tool_call["args"].replace("true", "True").replace("false", "False")
                 )
