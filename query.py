@@ -88,6 +88,7 @@ async def get_pings(
         return DYNAMODB_QUERY_ERROR.format(e)
 
 
+@tool
 def get_nth_ping_given_source(
     source_region, table_name, n, highest=False, start_time=None, end_time=None
 ):
@@ -151,10 +152,7 @@ def get_nth_ping_given_source(
         return DYNAMODB_QUERY_ERROR.format(e)
 
 
-import boto3
-from boto3.dynamodb.conditions import Key
-
-
+@tool
 def get_nth_ping_given_destination(
     destination, table_name, n, highest=False, start_time=None, end_time=None
 ):
