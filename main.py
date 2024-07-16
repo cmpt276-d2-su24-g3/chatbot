@@ -39,7 +39,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
 
     inference = partial(
         chain.astream,
-        input={"messages": [HumanMessage(content=chat_request.input)]},
+        input={"messages": [HumanMessage(chat_request.input)]},
         config={"configurable": {"session_id": chat_request.session_id}},
     )
 
@@ -61,14 +61,19 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
             get_nth_ping_given_destination,
             get_nth_ping_given_source,
             get_pings,
-            convert_to_utc,
+        ]
+    )
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="messages"),
         ]
     )
 
     def init_history(session_id: str) -> DynamoDBChatMessageHistory:
         return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
 
-    chain = RunnableWithMessageHistory(CHAT_PROMPT | llm, init_history)
+    chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
 
     inference = partial(
         chain.astream,
@@ -76,40 +81,35 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
     )
 
     async def get_response() -> AsyncGenerator[str, None]:
-        first = True
-        async for chunk in inference(
-            input={"messages": [HumanMessage(content=chat_request.input)]}
-        ):
-            if first:
-                gathered = chunk
-                first = False
-            else:
-                gathered = gathered + chunk
+        message = [HumanMessage(chat_request.input)]
+        while True:
+            gathered = None
+            async for chunk in inference(input={"messages": message}):
+                if gathered is None:
+                    gathered = chunk
+                else:
+                    gathered = gathered + chunk
 
-            yield chunk.content
+                yield chunk.content
 
-        if gathered.tool_call_chunks:
-            tool_messages = []
-            for tool_call in gathered.tool_call_chunks:
+            if gathered.tool_call_chunks:
+                message = []
+                for tool_call in gathered.tool_call_chunks:
 
-                tools = {
-                    "get_nth_ping_given_destination": get_nth_ping_given_destination,
-                    "get_nth_ping_given_source": get_nth_ping_given_source,
-                    "get_ping": get_pings,
-                    "convert_to_utc": convert_to_utc,
-                }
-                selected_tool = tools[tool_call["name"]]
-                tool_args = ast.literal_eval(
-                    tool_call["args"].replace("true", "True").replace("false", "False")
-                )
-                tool_output = await selected_tool.ainvoke(tool_args)
+                    tools = {
+                        "get_nth_ping_given_destination": get_nth_ping_given_destination,
+                        "get_nth_ping_given_source": get_nth_ping_given_source,
+                        "get_ping": get_pings,
+                    }
+                    selected_tool = tools[tool_call["name"]]
+                    tool_args = ast.literal_eval(
+                        tool_call["args"].replace("true", "True").replace("false", "False")
+                    )
+                    tool_output = await selected_tool.ainvoke(tool_args)
 
-                tool_messages.append(
-                    ToolMessage(tool_output, tool_call_id=tool_call["id"])
-                )
-
-            async for token in inference(input={"messages": tool_messages}):
-                yield token.content
+                    message.append(
+                        ToolMessage(tool_output, tool_call_id=tool_call["id"])
+                    )
 
     return StreamingResponse(
         get_response(),
