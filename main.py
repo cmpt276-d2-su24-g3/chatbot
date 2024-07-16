@@ -6,14 +6,14 @@ from typing import AsyncGenerator
 import boto3
 from fastapi import FastAPI, HTTPException, Response
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
-from langchain_core.messages import HumanMessage, ToolMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 from starlette.responses import StreamingResponse
 
-from prompts import SYSTEM_PROMPT
-from pydantic_models import chat_request_model, history_request_model
+from prompts import MESSAGE_TIME_STAMP, SYSTEM_PROMPT
+from pydantic_models import chat_request_model, history_request_model, rag_request_model
 from query import get_nth_ping_given_destination, get_nth_ping_given_source, get_pings
 from timezone import convert_to_utc
 
@@ -54,7 +54,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
 
 
 @app.post("/test-rag")
-async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
+async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
         [
@@ -81,7 +81,8 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
     )
 
     async def get_response() -> AsyncGenerator[str, None]:
-        message = [HumanMessage(chat_request.input)]
+        time_stamp = MESSAGE_TIME_STAMP.format(chat_request.time, convert_to_utc(chat_request.time))
+        message = [HumanMessage(chat_request.input + time_stamp)]
         while True:
             gathered = None
             async for chunk in inference(input={"messages": message}):

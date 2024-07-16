@@ -31,6 +31,12 @@ You have access to tools that can query the latency database to provide the nece
 - Ensure clarity and accuracy in responses, providing additional context or clarification if necessary.
 """
 
+MESSAGE_TIME_STAMP = """
+Message sent at:
+- user's time zone: {}
+- UTC time: {}
+"""
+
 PING_NOT_RECORDED_ERROR = {
     "default": "No ping data recorded between {} and {}.",
     "between": "No ping data recorded between {} and {} from {} to {}.",
