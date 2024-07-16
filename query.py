@@ -11,9 +11,9 @@ from prompts import (
 
 @tool
 async def get_pings(
-    source_region: str = None,
-    destination: str = None,
-    table_name: str = None,
+    source_region: str,
+    destination: str,
+    table_name: str,
     latest: bool = True,
     start_time: str = None,
     end_time: str = None,
@@ -90,7 +90,12 @@ async def get_pings(
 
 @tool
 def get_nth_ping_given_source(
-    source_region, table_name, n, highest=False, start_time=None, end_time=None
+    source_region: str,
+    table_name: str,
+    n: int,
+    start_time: str,
+    end_time: str,
+    highest: bool = False,
 ):
     """
     Query for the nth lowest or highest ping destination from a given source region within a specified time range.
@@ -99,9 +104,9 @@ def get_nth_ping_given_source(
     `source_region` (str): AWS region code for the source region.
     `table_name` (str): Name of the DynamoDB table to query.
     `n` (int): The rank of the ping to find.
-    `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
     `start_time` (str): ISO 8601 formatted string. UTC.
     `end_time` (str): ISO 8601 formatted string. UTC.
+    `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
 
     Returns:
     `str`: A string representation of the query result, or an error message.
@@ -154,7 +159,12 @@ def get_nth_ping_given_source(
 
 @tool
 def get_nth_ping_given_destination(
-    destination, table_name, n, highest=False, start_time=None, end_time=None
+    destination: str,
+    table_name: str,
+    n: int,
+    start_time: str,
+    end_time: str,
+    highest: bool=False,
 ):
     """
     Query for the nth lowest or highest ping source to a given destination within a specified time range.
@@ -163,9 +173,9 @@ def get_nth_ping_given_destination(
     `destination` (str): AWS region code or city name for the destination.
     `table_name` (str): Name of the DynamoDB table to query.
     `n` (int): The rank of the ping to find.
-    `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
     `start_time` (str): ISO 8601 formatted string. UTC.
     `end_time` (str): ISO 8601 formatted string. UTC.
+    `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
 
     Returns:
     `str`: A string representation of the query result, or an error message.

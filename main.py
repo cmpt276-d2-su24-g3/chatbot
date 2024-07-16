@@ -6,12 +6,13 @@ from typing import AsyncGenerator
 import boto3
 from fastapi import FastAPI, HTTPException, Response
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage, ToolMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 from starlette.responses import StreamingResponse
 
-from prompts import CHAT_PROMPT
+from prompts import SYSTEM_PROMPT
 from pydantic_models import chat_request_model, history_request_model
 from query import get_nth_ping_given_destination, get_nth_ping_given_source, get_pings
 from timezone import convert_to_utc
@@ -24,11 +25,17 @@ app = FastAPI()
 @app.post("/chat")
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="messages"),
+        ]
+    )
 
     def init_history(session_id: str) -> DynamoDBChatMessageHistory:
         return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
 
-    chain = RunnableWithMessageHistory(CHAT_PROMPT | llm, init_history)
+    chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
 
     inference = partial(
         chain.astream,
