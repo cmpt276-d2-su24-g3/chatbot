@@ -24,7 +24,7 @@ async def get_pings(
 
     Parameters:
     `source_region` (str): AWS region code for the source region.
-    `destination` (str): AWS region code or city name for the destination.
+    `destination` (str): AWS region code when r2r or city name for the destination when r2l.
     `table_name` (str): Name of the DynamoDB table to query.
     `latest` (bool): Set to True for the latest ping data, or False for historical data. Defaults to True.
     `start_time` (str): ISO 8601 formatted string. UTC.
@@ -32,10 +32,6 @@ async def get_pings(
 
     Returns:
     `str`: A string representation of the query results, or an error message.
-
-    Tables Available:
-    `R2R-Table`: Contains data about the ping between AWS regions.
-    `R2L-Table`: Contains data about the ping between AWS regions and locations (cities). NOT available for now.
     """
     dynamodb = boto3.resource("dynamodb")
 
@@ -110,10 +106,6 @@ def get_nth_ping_given_source(
 
     Returns:
     `str`: A string representation of the query result, or an error message.
-
-    Tables Available:
-    `R2R-Table`: Contains data about the ping between AWS regions.
-    `R2L-Table`: Contains data about the ping between AWS regions and locations (cities). NOT available for now.
     """
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
@@ -179,10 +171,6 @@ def get_nth_ping_given_destination(
 
     Returns:
     `str`: A string representation of the query result, or an error message.
-
-    Tables Available:
-    `R2R-Table`: Contains data about the ping between AWS regions.
-    `R2L-Table`: Contains data about the ping between AWS regions and locations (cities). NOT available for now.
     """
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
