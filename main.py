@@ -93,9 +93,10 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
                 yield chunk.content
 
             if gathered.tool_call_chunks:
+                yield "<|tool_call|>"
+
                 message = []
                 for tool_call in gathered.tool_call_chunks:
-
                     tools = {
                         "get_nth_ping_given_destination": get_nth_ping_given_destination,
                         "get_nth_ping_given_source": get_nth_ping_given_source,
@@ -103,7 +104,9 @@ async def chat_rag_api(chat_request: chat_request_model) -> StreamingResponse:
                     }
                     selected_tool = tools[tool_call["name"]]
                     tool_args = ast.literal_eval(
-                        tool_call["args"].replace("true", "True").replace("false", "False")
+                        tool_call["args"]
+                        .replace("true", "True")
+                        .replace("false", "False")
                     )
                     tool_output = await selected_tool.ainvoke(tool_args)
 
