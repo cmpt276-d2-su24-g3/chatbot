@@ -26,10 +26,14 @@ Based on user request, select the proper table from below when calling the tool.
 - If the user provides a time range, use that exact range for the query.
 - when the destination is a aws region, the lowest ping source to that destination will always to be itself, therefore you should also query the second lowest source even if the user only ask for the lowest.
 
+## get_aws_health
+
+- Call this to get the latest incident report for all AWS services.
+
 ## Error Handling
 
 - The tools might return error messages. Properly inform the user of these errors.
-- If an error message starts with "Error querying DynamoDB" do not retry by yourself as this likely indicates that the database is down. Inform the user to contact support. If the user wants to retry, you may do so, but avoid excessive retries.
+- If an error message starts with "Error querying DynamoDB", it might be caused by incorrect region or location names, or a indication that the dynamo db is not avaliable at the time.
 - Common error messages are usually self-explanatory and indicate that tweaking the tool call parameters might resolve the issue. Inform the user about the error and see what they want to change.
 
 # General Guidelines
@@ -44,7 +48,7 @@ Based on user request, select the proper table from below when calling the tool.
 
 MESSAGE_TIME_STAMP = """
 Message sent at:
-- user's time zone: {}
+- User's time zone: {}
 - UTC time: {}
 """
 
@@ -59,3 +63,7 @@ PING_NOT_RECORDED_ERROR = {
 NOT_ENOUGH_ENTRY_ERROR = "Not enough data recorded to find the {}th highest/lowest ping, {} deduplicated entries avaiable in the given time range."
 
 DYNAMODB_QUERY_ERROR = "Error querying DynamoDB: {}."
+
+AWS_HEALTH_NO_INCIDENT = "There are no current health incidents reported by AWS."
+
+AWS_HEALTH_REQUEST_TIMEOUT = "The request timed out. Please try again later."

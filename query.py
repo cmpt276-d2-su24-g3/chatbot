@@ -1,12 +1,9 @@
 import boto3
+import requests
 from boto3.dynamodb.conditions import Attr, Key
 from langchain.tools import tool
 
-from prompts import (
-    DYNAMODB_QUERY_ERROR,
-    NOT_ENOUGH_ENTRY_ERROR,
-    PING_NOT_RECORDED_ERROR,
-)
+from prompts import *
 
 
 @tool
@@ -207,3 +204,31 @@ async def get_nth_ping_given_destination(
 
     except Exception as e:
         return DYNAMODB_QUERY_ERROR.format(e)
+
+
+@tool
+async def get_aws_health() -> str:
+    """
+    Fetches the current AWS health incidents JSON from the specified URL.
+
+    Returns:
+        str: A message indicating the result of the request:
+            - If an error occurs during the request, returns a message describing the error.
+            - If the JSON is empty, returns "There are no current health incidents reported by AWS."
+            - If the JSON contains data, returns the JSON data as a string.
+    """
+    try:
+        response = requests.get(
+            "https://health.aws.amazon.com/public/currentevents",
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if not data:
+            return AWS_HEALTH_NO_INCIDENT
+        return str(data)
+    except requests.Timeout:
+        return AWS_HEALTH_REQUEST_TIMEOUT
+    except requests.RequestException as e:
+        return e

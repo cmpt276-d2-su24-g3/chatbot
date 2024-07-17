@@ -12,9 +12,14 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 from starlette.responses import StreamingResponse
 
-from prompts import MESSAGE_TIME_STAMP, SYSTEM_PROMPT
+from prompts import *
 from pydantic_models import chat_request_model, history_request_model, rag_request_model
-from query import get_nth_ping_given_destination, get_nth_ping_given_source, get_pings
+from query import (
+    get_aws_health,
+    get_nth_ping_given_destination,
+    get_nth_ping_given_source,
+    get_pings,
+)
 from timezone import convert_to_utc
 
 TABLE_NAME = "chat_history"
@@ -58,6 +63,7 @@ async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
         [
+            get_aws_health,
             get_nth_ping_given_destination,
             get_nth_ping_given_source,
             get_pings,
