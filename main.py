@@ -13,7 +13,7 @@ from langchain_openai import ChatOpenAI
 from starlette.responses import StreamingResponse
 
 from prompts import *
-from pydantic_models import chat_request_model, history_request_model, rag_request_model
+from pydantic_models import chat_request_model, history_request_model
 from query import (
     get_aws_health,
     get_nth_ping_given_destination,
@@ -29,37 +29,6 @@ app = FastAPI()
 
 @app.post("/chat")
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatOpenAI(streaming=True)
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(SYSTEM_PROMPT),
-            MessagesPlaceholder(variable_name="messages"),
-        ]
-    )
-
-    def init_history(session_id: str) -> DynamoDBChatMessageHistory:
-        return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
-
-    chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
-
-    inference = partial(
-        chain.astream,
-        input={"messages": [HumanMessage(chat_request.input)]},
-        config={"configurable": {"session_id": chat_request.session_id}},
-    )
-
-    async def get_response() -> AsyncGenerator[str, None]:
-        async for token in inference():
-            yield token.content
-
-    return StreamingResponse(
-        get_response(),
-        media_type="text/plain",
-    )
-
-
-@app.post("/test-rag")
-async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
         [
