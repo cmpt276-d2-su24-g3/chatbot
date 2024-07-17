@@ -77,6 +77,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                 for tool_call in gathered.tool_call_chunks:
 
                     tools = {
+                        "get_aws_health": get_aws_health,
                         "get_nth_ping_given_destination": get_nth_ping_given_destination,
                         "get_nth_ping_given_source": get_nth_ping_given_source,
                         "get_pings": get_pings,
