@@ -81,7 +81,9 @@ async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
     )
 
     async def get_response() -> AsyncGenerator[str, None]:
-        time_stamp = MESSAGE_TIME_STAMP.format(chat_request.time, convert_to_utc(chat_request.time))
+        time_stamp = MESSAGE_TIME_STAMP.format(
+            chat_request.time, convert_to_utc(chat_request.time)
+        )
         message = [HumanMessage(chat_request.input + time_stamp)]
         while True:
             gathered = None
@@ -98,10 +100,11 @@ async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
 
                 message = []
                 for tool_call in gathered.tool_call_chunks:
+
                     tools = {
                         "get_nth_ping_given_destination": get_nth_ping_given_destination,
                         "get_nth_ping_given_source": get_nth_ping_given_source,
-                        "get_ping": get_pings,
+                        "get_pings": get_pings,
                     }
                     selected_tool = tools[tool_call["name"]]
                     tool_args = ast.literal_eval(
@@ -114,6 +117,8 @@ async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
                     message.append(
                         ToolMessage(tool_output, tool_call_id=tool_call["id"])
                     )
+            else:
+                break
 
     return StreamingResponse(
         get_response(),

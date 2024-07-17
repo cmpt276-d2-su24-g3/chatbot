@@ -15,8 +15,8 @@ async def get_pings(
     destination: str,
     table_name: str,
     latest: bool = True,
-    start_time: str = None,
-    end_time: str = None,
+    time_lower_bound: str = None,
+    time_upper_bound: str = None,
 ) -> str:
     """
     Queries AWS DynamoDB tables for latency data between AWS regions or regions and locations.
@@ -27,27 +27,29 @@ async def get_pings(
     `destination` (str): AWS region code when r2r or city name for the destination when r2l.
     `table_name` (str): Name of the DynamoDB table to query.
     `latest` (bool): Set to True for the latest ping data, or False for historical data. Defaults to True.
-    `start_time` (str): ISO 8601 formatted string. UTC.
-    `end_time` (str): ISO 8601 formatted string. UTC.
+    `time_lower_bound` (str): ISO 8601 formatted string. UTC.
+    `time_upper_bound` (str): ISO 8601 formatted string. UTC.
 
     Returns:
     `str`: A string representation of the query results, or an error message.
     """
     dynamodb = boto3.resource("dynamodb")
-
     table = dynamodb.Table(table_name)
+
     key_conditions = Key("source_region").eq(source_region)
+    if latest is False:
+        if time_lower_bound and time_upper_bound:
+            key_conditions &= Key("timestamp").between(
+                time_lower_bound, time_upper_bound
+            )
+        elif time_lower_bound:
+            key_conditions &= Key("timestamp").gte(time_lower_bound)
+        elif time_upper_bound:
+            key_conditions &= Key("timestamp").lte(time_upper_bound)
+
+    filter_expression = Attr("destination").eq(destination)
 
     try:
-        filter_expression = Attr("destination").eq(destination)
-
-        if latest is False:
-            if start_time and end_time:
-                key_conditions &= Key("timestamp").between(start_time, end_time)
-            elif start_time:
-                key_conditions &= Key("timestamp").gte(start_time)
-            elif end_time:
-                key_conditions &= Key("timestamp").lte(end_time)
 
         if latest is False:
             response = table.query(
@@ -63,19 +65,19 @@ async def get_pings(
             )
 
         if response["Items"]:
-            return response["Items"]
+            return str(response["Items"])
         else:
-            if start_time and end_time:
+            if time_lower_bound and time_upper_bound:
                 return PING_NOT_RECORDED_ERROR["between"].format(
-                    source_region, destination, start_time, end_time
+                    source_region, destination, time_lower_bound, time_upper_bound
                 )
-            elif start_time:
+            elif time_lower_bound:
                 return PING_NOT_RECORDED_ERROR["after"].format(
-                    source_region, destination, start_time
+                    source_region, destination, time_lower_bound
                 )
-            elif end_time:
+            elif time_upper_bound:
                 return PING_NOT_RECORDED_ERROR["before"].format(
-                    source_region, destination, end_time
+                    source_region, destination, time_upper_bound
                 )
 
             return PING_NOT_RECORDED_ERROR["default"].format(source_region, destination)
@@ -89,8 +91,8 @@ def get_nth_ping_given_source(
     source_region: str,
     table_name: str,
     n: int,
-    start_time: str,
-    end_time: str,
+    time_lower_bound: str,
+    time_upper_bound: str,
     highest: bool = False,
 ):
     """
@@ -100,8 +102,8 @@ def get_nth_ping_given_source(
     `source_region` (str): AWS region code for the source region.
     `table_name` (str): Name of the DynamoDB table to query.
     `n` (int): The rank of the ping to find.
-    `start_time` (str): ISO 8601 formatted string. UTC.
-    `end_time` (str): ISO 8601 formatted string. UTC.
+    `time_lower_bound` (str): ISO 8601 formatted string. UTC.
+    `time_upper_bound` (str): ISO 8601 formatted string. UTC.
     `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
 
     Returns:
@@ -111,15 +113,12 @@ def get_nth_ping_given_source(
     table = dynamodb.Table(table_name)
 
     key_conditions = Key("source_region").eq(source_region)
-    if start_time:
-        key_conditions &= Key("timestamp").gte(start_time)
-    if end_time:
-        key_conditions &= Key("timestamp").lte(end_time)
+    key_conditions &= Key("timestamp").between(time_lower_bound, time_upper_bound)
 
     try:
         response = table.query(
             KeyConditionExpression=key_conditions,
-            ScanIndexForward=False,  # Sort by timestamp descending to get the latest records first
+            ScanIndexForward=not highest,
         )
 
         if "Items" in response:
@@ -139,7 +138,7 @@ def get_nth_ping_given_source(
                 reverse=highest,
             )
             if len(items) >= n:
-                return items[n - 1]
+                return str(items[n - 1])
             else:
                 return NOT_ENOUGH_ENTRY_ERROR.format(n, len(items))
         else:
@@ -154,9 +153,9 @@ def get_nth_ping_given_destination(
     destination: str,
     table_name: str,
     n: int,
-    start_time: str,
-    end_time: str,
-    highest: bool=False,
+    time_lower_bound: str,
+    time_upper_bound: str,
+    highest: bool = False,
 ):
     """
     Query for the nth lowest or highest ping source to a given destination within a specified time range.
@@ -165,8 +164,8 @@ def get_nth_ping_given_destination(
     `destination` (str): AWS region code or city name for the destination.
     `table_name` (str): Name of the DynamoDB table to query.
     `n` (int): The rank of the ping to find.
-    `start_time` (str): ISO 8601 formatted string. UTC.
-    `end_time` (str): ISO 8601 formatted string. UTC.
+    `time_lower_bound` (str): ISO 8601 formatted string. UTC.
+    `time_upper_bound` (str): ISO 8601 formatted string. UTC.
     `highest` (bool): Set to True to find the nth highest ping, or False to find the nth lowest ping. Defaults to False.
 
     Returns:
@@ -176,13 +175,12 @@ def get_nth_ping_given_destination(
     table = dynamodb.Table(table_name)
 
     try:
-        filter_expression = Attr("destination").eq(destination)
-        if start_time:
-            filter_expression &= Attr("timestamp").gte(start_time)
-        if end_time:
-            filter_expression &= Attr("timestamp").lte(end_time)
+        scan_kwargs = {
+            "FilterExpression": Attr("destination").eq(destination)
+            & Attr("timestamp").between(time_lower_bound, time_upper_bound)
+        }
 
-        response = table.scan(FilterExpression=filter_expression)
+        response = table.scan(**scan_kwargs)
 
         if "Items" in response:
             latest_pings = {}
@@ -201,7 +199,7 @@ def get_nth_ping_given_destination(
                 reverse=highest,
             )
             if len(items) >= n:
-                return items[n - 1]
+                return str(items[n - 1])
             else:
                 return NOT_ENOUGH_ENTRY_ERROR.format(n, len(items))
         else:
