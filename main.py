@@ -142,10 +142,15 @@ async def delete_history_api(history_request: history_request_model):
 @app.post("/fake-chat")
 async def test_api(_: chat_request_model) -> StreamingResponse:
     async def get_response():
-        for (
-            w
-        ) in "0123456789-._~:/?#[]@!$&'\"()*+,;=%ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz":
-            yield w
+        for c in "0123456789-._~:/?#[]@!$&'\"()*+,;=%":
+            yield c
+            await asyncio.sleep(0.05)
+
+        yield "<|tool_call|>"
+        await asyncio.sleep(0.5)
+
+        for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz":
+            yield c
             await asyncio.sleep(0.05)
 
     return StreamingResponse(get_response(), media_type="text/plain")
