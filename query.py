@@ -87,7 +87,7 @@ async def get_pings(
 
 
 @tool
-def get_nth_ping_given_source(
+async def get_nth_ping_given_source(
     source_region: str,
     table_name: str,
     n: int,
@@ -149,7 +149,7 @@ def get_nth_ping_given_source(
 
 
 @tool
-def get_nth_ping_given_destination(
+async def get_nth_ping_given_destination(
     destination: str,
     table_name: str,
     n: int,

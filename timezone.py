@@ -1,10 +1,7 @@
 from datetime import datetime
 import pytz
-from langchain.tools import tool
 
-
-@tool
-def convert_to_utc(iso8601_string):
+async def convert_to_utc(iso8601_string):
     """
     Converts an ISO 8601 formatted string to UTC.
 

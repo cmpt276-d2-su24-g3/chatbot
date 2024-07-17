@@ -82,7 +82,7 @@ async def chat_rag_api(chat_request: rag_request_model) -> StreamingResponse:
 
     async def get_response() -> AsyncGenerator[str, None]:
         time_stamp = MESSAGE_TIME_STAMP.format(
-            chat_request.time, convert_to_utc(chat_request.time)
+            chat_request.time, await convert_to_utc(chat_request.time)
         )
         message = [HumanMessage(chat_request.input + time_stamp)]
         while True:
