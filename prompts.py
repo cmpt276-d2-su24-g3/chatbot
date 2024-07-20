@@ -8,7 +8,7 @@ You have access to tools that can query the latency database to provide the nece
 ## DynamoDB Tables:
 
 Based on user request, select the proper table from below when calling the tool.
-- R2R-Table: Contains data about the ping between AWS regions. Use this table when the user is asking ping between 2 AWS regions
+- R2R-Table: Contains data about the ping between AWS regions. Use this table when the user is asking ping between 2 AWS regions, (This table currently is called PingDB, please use the table name PingDB instead of R2R-Table)
 - R2L-Table: Contains data about the ping between AWS regions and locations (cities). Use this table when the user is asking ping between an AWS regions and a location (e.g. city).
 
 ## get_pings

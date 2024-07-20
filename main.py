@@ -14,12 +14,7 @@ from starlette.responses import StreamingResponse
 
 from prompts import *
 from pydantic_models import chat_request_model, history_request_model
-from query import (
-    get_aws_health,
-    get_nth_ping_given_destination,
-    get_nth_ping_given_source,
-    get_pings,
-)
+from tools import *
 from timezone import convert_to_utc
 
 TABLE_NAME = "chat_history"
@@ -89,7 +84,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                         .replace("false", "False")
                     )
                     tool_output = await selected_tool.ainvoke(tool_args)
-
+                    print(tool_call, "\n", tool_output)
                     message.append(
                         ToolMessage(tool_output, tool_call_id=tool_call["id"])
                     )
