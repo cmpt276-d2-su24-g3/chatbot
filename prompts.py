@@ -28,7 +28,12 @@ Based on user request, select the proper table from below when calling the tool.
 
 ## get_aws_health
 
-- Call this to get the latest incident report for all AWS services.
+- Call this to get the latest incident reports and announcements for all AWS services.
+
+## get_available_services
+
+- Call this to get a list of all available AWS services in a given region.
+- Since each region has an extensive list of services, provide a summary by highlighting the most commonly used services and informing the user that many more are available.
 
 ## Error Handling
 

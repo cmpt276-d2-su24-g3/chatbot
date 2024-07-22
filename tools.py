@@ -215,8 +215,8 @@ async def get_aws_health() -> str:
     Fetches the current AWS health incidents JSON and announcements JSON from the specified URLs.
 
     Returns:
-        str: A message indicating the result of the requests:
-            - If an error occurs during any request, returns a message describing the error.
+        str: A string indicating the result of the requests:
+            - If an error occurs during any request, returns a string describing the error.
             - If both JSONs are empty, returns "There are no current health incidents or announcements reported by AWS."
             - If the JSONs contain data, returns the JSON data as a string.
     """
@@ -244,3 +244,23 @@ async def get_aws_health() -> str:
         return "The request timed out."
     except requests.RequestException as e:
         return f"An error occurred: {e}"
+
+
+@tool
+async def get_available_services(region_name: str) -> str:
+    """
+    Checks and lists all services available in a given AWS region.
+
+    Parameters:
+    region_name (str): The AWS region to check.
+
+    Returns:
+    str: A string listing all available services in the region.
+    """
+    session = boto3.Session(region_name=region_name)
+    available_services = session.get_available_services()
+
+    result = ", ".join(available_services)
+    result += f"\nTotal {len(available_services)} avaliable."
+
+    return result

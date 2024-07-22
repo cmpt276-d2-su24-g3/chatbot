@@ -27,6 +27,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
         [
+            get_available_services,
             get_aws_health,
             get_nth_ping_given_destination,
             get_nth_ping_given_source,
@@ -70,8 +71,8 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
 
                 message = []
                 for tool_call in gathered.tool_call_chunks:
-
                     tools = {
+                        "get_available_services": get_available_services,
                         "get_aws_health": get_aws_health,
                         "get_nth_ping_given_destination": get_nth_ping_given_destination,
                         "get_nth_ping_given_source": get_nth_ping_given_source,
@@ -84,7 +85,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                         .replace("false", "False")
                     )
                     tool_output = await selected_tool.ainvoke(tool_args)
-                    print(tool_call, "\n", tool_output)
+
                     message.append(
                         ToolMessage(tool_output, tool_call_id=tool_call["id"])
                     )
