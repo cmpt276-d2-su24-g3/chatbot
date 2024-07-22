@@ -5,6 +5,7 @@ from langchain.tools import tool
 
 from prompts import *
 
+
 @tool
 async def get_pings(
     source_region: str,
@@ -32,12 +33,16 @@ async def get_pings(
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
 
-    key_conditions = Key("origin").eq(source_region) & Key("destination#timestamp").begins_with(destination + '#')
+    key_conditions = Key("origin").eq(source_region) & Key(
+        "destination#timestamp"
+    ).begins_with(destination + "#")
 
     filter_expression = Attr("destination").eq(destination)
     if latest is False:
         if time_lower_bound and time_upper_bound:
-            filter_expression &= Attr("timestamp").between(time_lower_bound, time_upper_bound)
+            filter_expression &= Attr("timestamp").between(
+                time_lower_bound, time_upper_bound
+            )
         elif time_lower_bound:
             filter_expression &= Attr("timestamp").gte(time_lower_bound)
         elif time_upper_bound:
@@ -207,26 +212,35 @@ async def get_nth_ping_given_destination(
 @tool
 async def get_aws_health() -> str:
     """
-    Fetches the current AWS health incidents JSON from the specified URL.
+    Fetches the current AWS health incidents JSON and announcements JSON from the specified URLs.
 
     Returns:
-        str: A message indicating the result of the request:
-            - If an error occurs during the request, returns a message describing the error.
-            - If the JSON is empty, returns "There are no current health incidents reported by AWS."
-            - If the JSON contains data, returns the JSON data as a string.
+        str: A message indicating the result of the requests:
+            - If an error occurs during any request, returns a message describing the error.
+            - If both JSONs are empty, returns "There are no current health incidents or announcements reported by AWS."
+            - If the JSONs contain data, returns the JSON data as a string.
     """
     try:
-        response = requests.get(
+        health_response = requests.get(
             "https://health.aws.amazon.com/public/currentevents",
             timeout=10,
         )
-        response.raise_for_status()
-        data = response.json()
+        health_response.raise_for_status()
+        health_data = health_response.json()
 
-        if not data:
-            return AWS_HEALTH_NO_INCIDENT
-        return str(data)
+        announcement_response = requests.get(
+            "https://health.aws.amazon.com/public/announcement",
+            timeout=10,
+        )
+        announcement_response.raise_for_status()
+        announcement_data = announcement_response.json()
+
+        results = {"health_incidents": health_data, "announcements": announcement_data}
+
+        if not health_data and not announcement_data:
+            return "There are no current health incidents or announcements reported by AWS."
+        return str(results)
     except requests.Timeout:
-        return AWS_HEALTH_REQUEST_TIMEOUT
+        return "The request timed out."
     except requests.RequestException as e:
-        return e
+        return f"An error occurred: {e}"
