@@ -9,13 +9,13 @@ from langchain_community.chat_message_histories import DynamoDBChatMessageHistor
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_openai import ChatOpenAI
+from langchain_aws import ChatBedrock
 from starlette.responses import StreamingResponse
 
 from prompts import *
 from pydantic_models import chat_request_model, history_request_model
-from tools import *
 from timezone import convert_to_utc
+from tools import *
 
 TABLE_NAME = "chat_history"
 
@@ -24,7 +24,7 @@ app = FastAPI()
 
 @app.post("/chat")
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatOpenAI(streaming=True)
+    llm = ChatBedrock(model_id="meta.llama3-1-8b-instruct-v1:0", streaming=True)
     llm = llm.bind_tools(
         [
             get_available_services,
