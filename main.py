@@ -24,11 +24,12 @@ app = FastAPI()
 
 @app.post("/chat")
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatBedrock(model_id="meta.llama3-1-8b-instruct-v1:0", streaming=True)
+    llm = ChatBedrock(model_id="meta.llama3-1-70b-instruct-v1:0", streaming=True)
     llm = llm.bind_tools(
         [
             get_available_services,
             get_aws_health,
+            get_aws_health_history,
             get_nth_ping_given_destination,
             get_nth_ping_given_source,
             get_pings,
@@ -74,6 +75,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                     tools = {
                         "get_available_services": get_available_services,
                         "get_aws_health": get_aws_health,
+                        "get_aws_health_history": get_aws_health_history,
                         "get_nth_ping_given_destination": get_nth_ping_given_destination,
                         "get_nth_ping_given_source": get_nth_ping_given_source,
                         "get_pings": get_pings,

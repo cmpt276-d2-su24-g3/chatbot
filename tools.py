@@ -4,6 +4,7 @@ from boto3.dynamodb.conditions import Attr, Key
 from langchain.tools import tool
 
 from prompts import *
+from timezone import unix_to_iso_8601
 
 
 @tool
@@ -240,10 +241,50 @@ async def get_aws_health() -> str:
         if not health_data and not announcement_data:
             return "There are no current health incidents or announcements reported by AWS."
         return str(results)
-    except requests.Timeout:
-        return "The request timed out."
-    except requests.RequestException as e:
-        return f"An error occurred: {e}"
+    except (requests.Timeout, requests.RequestException) as e:
+        return f"Error fetching data: {e}"
+
+
+@tool
+async def get_aws_health_history(start_time: str, end_time: str) -> str:
+    """
+    Fetches AWS health history incidents within the specified time frame.
+
+    Parameters:
+        start_time (str): The start of the time frame in ISO 8601 format.
+        end_time (str): The end of the time frame in ISO 8601 format.
+
+    Returns:
+        str: A JSON string representing the filtered events within the time frame.
+    """
+    try:
+        response = requests.get(
+            "https://history-events-us-west-2-prod.s3.amazonaws.com/historyevents.json",
+            timeout=10,
+        )
+        response.raise_for_status()
+        history_data = response.json()
+    except (requests.Timeout, requests.RequestException) as e:
+        return f"Error fetching data: {e}"
+
+    filtered_history = {}
+
+    for region, events in history_data.items():
+        filtered_events = []
+        for event in events:
+            event["date"] = await unix_to_iso_8601(event["date"])
+            if start_time <= event["date"] <= end_time:
+                for log in event.get("event_log", []):
+                    log["timestamp"] = await unix_to_iso_8601(log["timestamp"])
+                filtered_events.append(event)
+
+        if filtered_events:
+            filtered_history[region] = filtered_events
+
+    if filtered_history:
+        return filtered_history
+    else:
+        return AWS_HEALTH_NO_HISTORY
 
 
 @tool

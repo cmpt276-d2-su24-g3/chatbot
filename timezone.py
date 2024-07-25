@@ -1,16 +1,13 @@
-from datetime import datetime
-import pytz
+from datetime import datetime, UTC
 
-async def convert_to_utc(iso8601_string):
-    """
-    Converts an ISO 8601 formatted string to UTC.
 
-    Parameters:
-    `iso8601_string` (str): ISO 8601 formatted date-time string.
-
-    Returns:
-    `str`: The converted UTC date-time string in ISO 8601 format.
-    """
+async def convert_to_utc(iso8601_string: str) -> str:
     dt = datetime.fromisoformat(iso8601_string)
-    dt_utc = dt.astimezone(pytz.utc)
+    dt_utc = dt.astimezone(UTC)
     return dt_utc.isoformat()
+
+
+async def unix_to_iso_8601(unix_string: str) -> str:
+    unix_timestemp = int(unix_string)
+    dt = datetime.fromtimestamp(unix_timestemp, UTC)
+    return dt.isoformat()
