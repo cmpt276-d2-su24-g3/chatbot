@@ -282,7 +282,7 @@ async def get_aws_health_history(start_time: str, end_time: str) -> str:
             filtered_history[region] = filtered_events
 
     if filtered_history:
-        return filtered_history
+        return str(filtered_history)
     else:
         return AWS_HEALTH_NO_HISTORY
 
