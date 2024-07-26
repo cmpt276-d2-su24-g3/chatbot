@@ -3,4 +3,5 @@ fastapi
 langchain
 langchain_aws
 langchain_community
+langchain_openai
 uvicorn
