@@ -3,4 +3,4 @@ fastapi
 langchain
 langchain_aws
 langchain_community
-pytz
+uvicorn
