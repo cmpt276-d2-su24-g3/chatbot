@@ -337,7 +337,7 @@ async def search_duckduckgo(query: str) -> str:
 @tool
 async def url_loader(url: str) -> str:
     """
-    Loads and retrieves the content of a given URL.
+    Loads and retrieves the content of a given URL. Takes one url at a time.
 
     Parameters:
     url (str): The URL of the web page to load and retrieve content from.
