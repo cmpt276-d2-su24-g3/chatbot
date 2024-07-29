@@ -324,7 +324,7 @@ async def search_duckduckgo(query: str) -> str:
     Returns:
     str: A JSON-like string representation of the search results.
     """
-    wrapper = DuckDuckGoSearchAPIWrapper(safesearch="strict")
+    wrapper = DuckDuckGoSearchAPIWrapper(safesearch="strict", max_results=10)
     search = DuckDuckGoSearchResults(api_wrapper=wrapper)
 
     try:
