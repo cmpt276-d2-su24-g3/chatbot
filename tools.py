@@ -147,7 +147,7 @@ async def get_nth_ping_given_source(
             return PING_NOT_RECORDED_ERROR["single"].format(source_region)
 
     except Exception as e:
-        return DYNAMODB_QUERY_ERROR.format(e)
+        return str(e)
 
 
 @tool
@@ -208,7 +208,7 @@ async def get_nth_ping_given_destination(
             return PING_NOT_RECORDED_ERROR["single"].format(destination)
 
     except Exception as e:
-        return DYNAMODB_QUERY_ERROR.format(e)
+        return str(e)
 
 
 @tool
@@ -243,7 +243,7 @@ async def get_aws_health() -> str:
             return "There are no current health incidents or announcements reported by AWS."
         return str(results)
     except (requests.Timeout, requests.RequestException) as e:
-        return f"Error fetching data: {e}"
+        return str(e)
 
 
 @tool

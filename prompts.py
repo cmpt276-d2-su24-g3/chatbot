@@ -72,8 +72,6 @@ PING_NOT_RECORDED_ERROR = {
 
 NOT_ENOUGH_ENTRY_ERROR = "Not enough data recorded to find the {}th highest/lowest ping, {} deduplicated entries avaiable in the given time range."
 
-DYNAMODB_QUERY_ERROR = "Error querying DynamoDB: {}."
-
 AWS_HEALTH_NO_INCIDENT = "There are no current health incidents reported by AWS."
 
 AWS_HEALTH_NO_HISTORY = "No history incident reported within the specified time frame."
