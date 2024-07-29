@@ -83,7 +83,7 @@ async def get_pings(
             return PING_NOT_RECORDED_ERROR["default"].format(source_region, destination)
 
     except Exception as e:
-        return DYNAMODB_QUERY_ERROR.format(e)
+        return str(e)
 
 
 @tool
