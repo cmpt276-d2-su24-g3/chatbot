@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 
 import boto3
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -20,6 +21,14 @@ from tools import *
 TABLE_NAME = "chat_history"
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/chat")
