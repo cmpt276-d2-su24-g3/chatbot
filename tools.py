@@ -299,13 +299,16 @@ async def get_available_services(region_name: str) -> str:
     Returns:
     str: A string listing all available services in the region.
     """
-    session = boto3.Session(region_name=region_name)
-    available_services = session.get_available_services()
+    try:
+        session = boto3.Session(region_name=region_name)
+        available_services = session.get_available_services()
 
-    result = ", ".join(available_services)
-    result += f"\nTotal {len(available_services)} avaliable."
+        result = ", ".join(available_services)
+        result += f"\nTotal {len(available_services)} avaliable."
 
-    return result
+        return result
+    except Exception as e:
+        return str(e)
 
 
 @tool
