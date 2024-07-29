@@ -2,7 +2,8 @@ import boto3
 import requests
 from boto3.dynamodb.conditions import Attr, Key
 from langchain.tools import tool
-
+from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from prompts import *
 from timezone import unix_to_iso_8601
 
@@ -305,3 +306,24 @@ async def get_available_services(region_name: str) -> str:
     result += f"\nTotal {len(available_services)} avaliable."
 
     return result
+
+
+@tool
+async def search_duckduckgo(query: str) -> str:
+    """
+    Conducts a search using the DuckDuckGo API.
+
+    Parameters:
+    query (str): The search query.
+
+    Returns:
+    str: A JSON-like string representation of the search results.
+    """
+    wrapper = DuckDuckGoSearchAPIWrapper(safesearch="strict")
+    search = DuckDuckGoSearchResults(api_wrapper=wrapper)
+
+    try:
+        results = await search.ainvoke(query)
+        return str(results)
+    except Exception as e:
+        return f"Error during search: {e}"
