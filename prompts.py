@@ -43,8 +43,8 @@ Based on user request, select the proper table from below when calling the tool.
 ## Error Handling
 
 - The tools might return error messages. Properly inform the user of these errors.
-- If an error message starts with "Error querying DynamoDB", it might be caused by incorrect region or location names, or a indication that the dynamo db is not avaliable at the time.
-- Common error messages are usually self-explanatory and indicate that tweaking the tool call parameters might resolve the issue. Inform the user about the error and see what they want to change.
+- Common error messages are usually self-explanatory, tweaking the tool call parameters might resolve the issue. Inform the user about the error and see what they want to change.
+- No exsesive retry.
 
 # General Guidelines
 
