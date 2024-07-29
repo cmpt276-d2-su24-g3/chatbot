@@ -34,6 +34,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
             get_nth_ping_given_source,
             get_pings,
             search_duckduckgo,
+            url_loader,
         ]
     )
     prompt_template = ChatPromptTemplate.from_messages(
@@ -80,6 +81,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                         "get_nth_ping_given_source": get_nth_ping_given_source,
                         "get_pings": get_pings,
                         "search_duckduckgo": search_duckduckgo,
+                        "url_loader": url_loader,
                     }
                     selected_tool = tools[tool_call["name"]]
                     tool_args = ast.literal_eval(
