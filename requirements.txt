@@ -1,4 +1,5 @@
 boto3
+duckduckgo-search
 fastapi
 langchain
 langchain_aws
