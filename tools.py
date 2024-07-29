@@ -2,8 +2,10 @@ import boto3
 import requests
 from boto3.dynamodb.conditions import Attr, Key
 from langchain.tools import tool
+from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+
 from prompts import *
 from timezone import unix_to_iso_8601
 
@@ -328,5 +330,25 @@ async def search_duckduckgo(query: str) -> str:
     try:
         results = await search.ainvoke(query)
         return str(results)
+    except Exception as e:
+        return str(e)
+
+
+@tool
+async def url_loader(url: str) -> str:
+    """
+    Loads and retrieves the content of a given URL.
+
+    Parameters:
+    url (str): The URL of the web page to load and retrieve content from.
+
+    Returns:
+    str: The content of the web page as a string.
+    """
+    try:
+        loader = UnstructuredURLLoader(urls=[url])
+        data = loader.load()
+
+        return str(data[0].page_content)
     except Exception as e:
         return str(e)
