@@ -266,7 +266,7 @@ async def get_aws_health_history(start_time: str, end_time: str) -> str:
         response.raise_for_status()
         history_data = response.json()
     except (requests.Timeout, requests.RequestException) as e:
-        return f"Error fetching data: {e}"
+        return str(e)
 
     filtered_history = {}
 
@@ -326,4 +326,4 @@ async def search_duckduckgo(query: str) -> str:
         results = await search.ainvoke(query)
         return str(results)
     except Exception as e:
-        return f"Error during search: {e}"
+        return str(e)
