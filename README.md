@@ -1,6 +1,10 @@
 
 # Chatbot API Documentation
 
+## Authentication
+
+All endpoints require an `X-API-Key` to be included in the request headers.
+
 ## Endpoints
 
 ### 1 . `/chat`
@@ -103,7 +107,12 @@ This endpoint takes any string input and streams back a hard-coded response. The
 
 #### Example Request
 
-```json
+```http
+POST /fake-chat HTTP/1.1
+Host: zefta.catalpa.pw:8000
+Content-Type: application/json
+X-API-Key: your_api_key_here
+
 {
   "input": "Hello, world!",
   "session_id": "123e4567-e89b-12d3-a456-426614174000",
