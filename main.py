@@ -1,11 +1,13 @@
 import ast
 import asyncio
+import os
 from functools import partial
 from typing import AsyncGenerator
 
 import boto3
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -30,8 +32,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+api_key_header = APIKeyHeader(name="X-API-Key")
 
-@app.post("/chat")
+
+def get_api_key(api_key: str = Security(api_key_header)):
+    if api_key == os.getenv("CHATBOT_API_KEY"):
+        return api_key
+    else:
+        raise HTTPException(status_code=403)
+
+
+@app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatOpenAI(streaming=True)
     llm = llm.bind_tools(
@@ -112,7 +123,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
     )
 
 
-@app.post("/get-history")
+@app.post("/get-history", dependencies=[Security(get_api_key)])
 async def get_history_api(history_request: history_request_model):
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(TABLE_NAME)
@@ -132,7 +143,7 @@ async def get_history_api(history_request: history_request_model):
     )
 
 
-@app.post("/delete-history")
+@app.post("/delete-history", dependencies=[Security(get_api_key)])
 async def delete_history_api(history_request: history_request_model):
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(TABLE_NAME)
@@ -150,7 +161,7 @@ async def delete_history_api(history_request: history_request_model):
     return Response(status_code=204)
 
 
-@app.post("/fake-chat")
+@app.post("/fake-chat", dependencies=[Security(get_api_key)])
 async def test_api(_: chat_request_model) -> StreamingResponse:
     async def get_response():
         for c in "0123456789-._~:/?#[]@!$&'\"()*+,;=%":
