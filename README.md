@@ -133,3 +133,12 @@ source venv/bin/activate
 pip install -r requirement.txt
 uvicorn main:app
 ```
+
+## Environment Variables
+
+```shell
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=
+CHATBOT_API_KEY=
+```
