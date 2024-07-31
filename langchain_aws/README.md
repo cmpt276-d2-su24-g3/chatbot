@@ -1,0 +1,1 @@
+Patch for infinite recursive when streaming tool call generation taken from https://github.com/langchain-ai/langchain-aws/pull/119 <3

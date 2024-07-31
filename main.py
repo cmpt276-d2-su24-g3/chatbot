@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import os
+import sys
 from functools import partial
 from typing import AsyncGenerator
 
@@ -12,13 +13,15 @@ from langchain_community.chat_message_histories import DynamoDBChatMessageHistor
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_openai import ChatOpenAI
 from starlette.responses import StreamingResponse
 
 from prompts import *
 from pydantic_models import chat_request_model, history_request_model
 from timezone import convert_to_utc
 from tools import *
+
+sys.path.append("./langchain_aws")
+from langchain_aws import ChatBedrock
 
 TABLE_NAME = "chat_history"
 
@@ -44,7 +47,7 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatOpenAI(streaming=True, model="gpt-4o")
+    llm = ChatBedrock(streaming=True, model_id="anthropic.claude-3-sonnet-20240229-v1:0")
     llm = llm.bind_tools(
         [
             get_available_services,
@@ -79,6 +82,8 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
             chat_request.time, await convert_to_utc(chat_request.time)
         )
         message = [HumanMessage(chat_request.input + time_stamp)]
+
+        yield "<|message_received|>"
         while True:
             gathered = None
             async for chunk in inference(input={"messages": message}):
@@ -86,7 +91,10 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                     gathered = chunk
                 else:
                     gathered = gathered + chunk
-                yield chunk.content
+
+                if chunk.content:
+                    if "text" in chunk.content[0]:
+                        yield chunk.content[0]["text"]
 
             if gathered.tool_call_chunks:
                 yield "<|tool_call|>"
