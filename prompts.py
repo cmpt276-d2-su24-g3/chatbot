@@ -35,7 +35,7 @@ Based on user request, select the proper table from below when calling the tool:
 - **Purpose**: Find the nth lowest or highest ping from a given source region/destination within a specified time range.
 - **Default Time Range**: If the user does not specify a time range, query the past 12 hours. 
 - **Exact Time Specification**: If the user specifies an exact time, query a range of -6h to +6h around that time to ensure data availability. Inform the user about the closest result if you cannot find an exact one.
-- **AWS Region Destination**: When the destination is an AWS region, the lowest ping source to that destination will always be itself. You must also query the second lowest source even if the user only asks for the lowest.
+- **AWS Region Destination**: When the destination is an AWS region, the lowest ping source to that destination will always be itself. You must also query the second lowest source even if the user only asks for the lowest, so you can report the inter-region too.
 
 ### `get_aws_health`
 

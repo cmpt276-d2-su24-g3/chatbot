@@ -65,7 +65,7 @@ async def get_pings(
                 ScanIndexForward=False,
                 Limit=1,
             )
-        print(response)
+
         if response["Items"]:
             return str(response["Items"])
         else:

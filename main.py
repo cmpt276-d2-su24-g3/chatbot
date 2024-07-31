@@ -44,7 +44,7 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatOpenAI(streaming=True)
+    llm = ChatOpenAI(streaming=True, model="gpt-4o")
     llm = llm.bind_tools(
         [
             get_available_services,
