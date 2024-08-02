@@ -87,20 +87,6 @@ This endpoint takes a UUID v4 session id and deletes the chat history for that s
 }
 ```
 
-### 4. `/fake-chat`
-
-This endpoint takes any string input and streams back a hard-coded response. The response contains all common charactors and `<|tool_call|>` token.
-
-#### Input
-
-```json
-{
-  "input": "str",
-  "session_id": "str",
-  "time": "str"
-}
-```
-
 #### Output
 
 - Plain text via HTTP stream
@@ -130,18 +116,6 @@ LLM has access to all function in [tool.py](tool.py):
 - **get_aws_health**: Fetches current AWS health incidents and announcements.
 - **get_aws_health_history**: Fetches AWS health history incidents within a specified time frame.
 - **get_available_services**: Lists all services available in a given AWS region.
-
-## Setup
-
-```shell
-apt update
-apt install python3.12 python3-pip python3.12-venv -y
-
-python -m venv venv
-source venv/bin/activate
-pip install -r requirement.txt
-uvicorn main:app
-```
 
 ## Environment Variables
 
