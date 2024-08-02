@@ -1,5 +1,4 @@
 import ast
-import asyncio
 import os
 import sys
 from functools import partial
