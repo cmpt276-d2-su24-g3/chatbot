@@ -123,5 +123,6 @@ LLM has access to all function in [tool.py](tool.py):
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=
+BEDROCK_MODEL_ID= #must work with streaming tool calls
 CHATBOT_API_KEY=
 ```

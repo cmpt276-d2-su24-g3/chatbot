@@ -45,7 +45,7 @@ def get_api_key(api_key: str = Security(api_key_header)):
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
     llm = ChatBedrock(
-        streaming=True, model_id="anthropic.claude-3-sonnet-20240229-v1:0"
+        streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID")
     )
     llm = llm.bind_tools(
         [
