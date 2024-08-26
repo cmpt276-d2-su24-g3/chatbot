@@ -2,6 +2,7 @@ boto3
 duckduckgo-search
 fastapi
 langchain
+langchain_aws
 langchain_community
 selenium
 unstructured

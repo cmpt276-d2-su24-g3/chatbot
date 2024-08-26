@@ -8,6 +8,7 @@ import boto3
 from fastapi import FastAPI, HTTPException, Response, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from langchain_aws import ChatBedrock
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -18,9 +19,6 @@ from prompts import *
 from pydantic_models import chat_request_model, history_request_model
 from timezone import convert_to_utc
 from tools import *
-
-sys.path.append("./langchain_aws")
-from langchain_aws import ChatBedrock
 
 TABLE_NAME = "chat_history"
 
@@ -46,7 +44,9 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatBedrock(streaming=True, model_id="anthropic.claude-3-sonnet-20240229-v1:0")
+    llm = ChatBedrock(
+        streaming=True, model_id="anthropic.claude-3-sonnet-20240229-v1:0"
+    )
     llm = llm.bind_tools(
         [
             get_available_services,
