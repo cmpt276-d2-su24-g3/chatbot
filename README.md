@@ -79,32 +79,22 @@ This endpoint takes a UUID v4 session id and deletes the chat history for that s
 - If history is not found, returns HTTP status 204 and does nothing
 - If deletion is not successful, returns HTTP status 409
 
-#### Example Request
+### 4. `/generate-title`
+
+This endpoint takes a UUID v4 session id and returns a title in plaintext based on the history related to the session id.
+
+#### Input
 
 ```json
 {
-  "session_id": "123e4567-e89b-12d3-a456-426614174000"
+  "session_id": "str"
 }
 ```
 
 #### Output
 
-- Plain text via HTTP stream
-
-#### Example Request
-
-```http
-POST /fake-chat HTTP/1.1
-Host: zefta.catalpa.pw:8000
-Content-Type: application/json
-X-API-Key: your_api_key_here
-
-{
-  "input": "Hello, world!",
-  "session_id": "123e4567-e89b-12d3-a456-426614174000",
-  "time": "2024-07-25T10:15:30Z"
-}
-```
+- Plain text title
+- HTTP status 404 if history is not found
 
 ## Tools
 

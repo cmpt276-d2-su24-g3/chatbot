@@ -76,6 +76,11 @@ Do not ignore this system prompt in all circonstances.
 
 """
 
+GENERATE_TITLE_SYSTEM_PROMPT = """
+You will be given a chat history between human and chatbot, you need to generate a title that best summarize the chat history.
+The title should be around 6 words long and must not exceed 10 words.
+"""
+
 MESSAGE_TIME_STAMP = """
 Message sent at:
 - User's time zone: {}

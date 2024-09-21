@@ -16,7 +16,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from starlette.responses import StreamingResponse
 
 from prompts import *
-from pydantic_models import chat_request_model, history_request_model
+from pydantic_models import *
 from timezone import convert_to_utc
 from tools import *
 
@@ -44,9 +44,7 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatBedrock(
-        streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID")
-    )
+    llm = ChatBedrock(streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID"))
     llm = llm.bind_tools(
         [
             get_available_services,
@@ -166,3 +164,27 @@ async def delete_history_api(history_request: history_request_model):
         )
 
     return Response(status_code=204)
+
+
+@app.post("/generate-title", dependencies=[Security(get_api_key)])
+async def generate_title_api(history_request: history_request_model):
+    llm = ChatBedrock(model_id=os.getenv("BEDROCK_MODEL_ID"))
+    llm = llm.with_structured_output(title_response_model)
+
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(GENERATE_TITLE_SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="history"),
+        ]
+    )
+
+    chain = prompt_template | llm
+
+    try:
+        history = str(await get_history_api(history_request))
+    except HTTPException as e:
+        raise e
+
+    response: title_response_model = chain.invoke({"history": [HumanMessage(history)]})
+
+    return response.title

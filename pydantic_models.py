@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class chat_request_model(BaseModel):
@@ -9,3 +9,7 @@ class chat_request_model(BaseModel):
 
 class history_request_model(BaseModel):
     session_id: str
+
+
+class title_response_model(BaseModel):
+    title: str = Field(description="Maximum 10 words.")
