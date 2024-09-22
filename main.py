@@ -188,3 +188,8 @@ async def generate_title_api(history_request: history_request_model):
     response: title_response_model = chain.invoke({"history": [HumanMessage(history)]})
 
     return response.title
+
+
+@app.get("/")
+async def health_check():
+    return Response(status_code=200)
