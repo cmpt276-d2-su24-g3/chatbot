@@ -43,88 +43,91 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    llm = ChatBedrock(streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID"))
-    llm = llm.bind_tools(
-        [
-            get_available_services,
-            get_aws_health,
-            get_aws_health_history,
-            get_nth_ping_given_destination,
-            get_nth_ping_given_source,
-            get_pings,
-            search_duckduckgo,
-            url_loader,
-        ]
-    )
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(SYSTEM_PROMPT),
-            MessagesPlaceholder(variable_name="messages"),
-        ]
-    )
-
-    def init_history(session_id: str) -> DynamoDBChatMessageHistory:
-        return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
-
-    chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
-
-    inference = partial(
-        chain.astream,
-        config={"configurable": {"session_id": chat_request.session_id}},
-    )
-
-    async def get_response() -> AsyncGenerator[str, None]:
-        time_stamp = MESSAGE_TIME_STAMP.format(
-            chat_request.time, await convert_to_utc(chat_request.time)
+    try:
+        llm = ChatBedrock(streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID"))
+        llm = llm.bind_tools(
+            [
+                get_available_services,
+                get_aws_health,
+                get_aws_health_history,
+                get_nth_ping_given_destination,
+                get_nth_ping_given_source,
+                get_pings,
+                search_duckduckgo,
+                url_loader,
+            ]
         )
-        message = [HumanMessage(chat_request.input + time_stamp)]
+        prompt_template = ChatPromptTemplate.from_messages(
+            [
+                SystemMessage(SYSTEM_PROMPT),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
 
-        yield "<|message_received|>"
-        while True:
-            gathered = None
-            async for chunk in inference(input={"messages": message}):
-                if gathered is None:
-                    gathered = chunk
+        def init_history(session_id: str) -> DynamoDBChatMessageHistory:
+            return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
+
+        chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
+
+        inference = partial(
+            chain.astream,
+            config={"configurable": {"session_id": chat_request.session_id}},
+        )
+
+        async def get_response() -> AsyncGenerator[str, None]:
+            time_stamp = MESSAGE_TIME_STAMP.format(
+                chat_request.time, await convert_to_utc(chat_request.time)
+            )
+            message = [HumanMessage(chat_request.input + time_stamp)]
+
+            yield "<|message_received|>"
+            while True:
+                gathered = None
+                async for chunk in inference(input={"messages": message}):
+                    if gathered is None:
+                        gathered = chunk
+                    else:
+                        gathered = gathered + chunk
+
+                    if chunk.content:
+                        if "text" in chunk.content[0]:
+                            yield chunk.content[0]["text"]
+
+                if gathered.tool_call_chunks:
+                    yield "<|tool_call|>"
+
+                    message = []
+                    for tool_call in gathered.tool_call_chunks:
+                        tools = {
+                            "get_available_services": get_available_services,
+                            "get_aws_health": get_aws_health,
+                            "get_aws_health_history": get_aws_health_history,
+                            "get_nth_ping_given_destination": get_nth_ping_given_destination,
+                            "get_nth_ping_given_source": get_nth_ping_given_source,
+                            "get_pings": get_pings,
+                            "search_duckduckgo": search_duckduckgo,
+                            "url_loader": url_loader,
+                        }
+                        selected_tool = tools[tool_call["name"]]
+                        tool_args = ast.literal_eval(
+                            tool_call["args"]
+                            .replace("true", "True")
+                            .replace("false", "False")
+                        )
+                        tool_output = await selected_tool.ainvoke(tool_args)
+
+                        message.append(
+                            ToolMessage(tool_output, tool_call_id=tool_call["id"])
+                        )
                 else:
-                    gathered = gathered + chunk
+                    break
 
-                if chunk.content:
-                    if "text" in chunk.content[0]:
-                        yield chunk.content[0]["text"]
-
-            if gathered.tool_call_chunks:
-                yield "<|tool_call|>"
-
-                message = []
-                for tool_call in gathered.tool_call_chunks:
-                    tools = {
-                        "get_available_services": get_available_services,
-                        "get_aws_health": get_aws_health,
-                        "get_aws_health_history": get_aws_health_history,
-                        "get_nth_ping_given_destination": get_nth_ping_given_destination,
-                        "get_nth_ping_given_source": get_nth_ping_given_source,
-                        "get_pings": get_pings,
-                        "search_duckduckgo": search_duckduckgo,
-                        "url_loader": url_loader,
-                    }
-                    selected_tool = tools[tool_call["name"]]
-                    tool_args = ast.literal_eval(
-                        tool_call["args"]
-                        .replace("true", "True")
-                        .replace("false", "False")
-                    )
-                    tool_output = await selected_tool.ainvoke(tool_args)
-
-                    message.append(
-                        ToolMessage(tool_output, tool_call_id=tool_call["id"])
-                    )
-            else:
-                break
-
-    return StreamingResponse(
-        get_response(),
-        media_type="text/plain",
-    )
+        return StreamingResponse(
+            get_response(),
+            media_type="text/plain",
+        )
+    except Exception:
+        return "<|tool_call|>"
 
 
 @app.post("/get-history", dependencies=[Security(get_api_key)])
