@@ -127,7 +127,7 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
             media_type="text/plain",
         )
     except Exception:
-        return "<|tool_call|>"
+        return "<|generation_error|>"
 
 
 @app.post("/get-history", dependencies=[Security(get_api_key)])
