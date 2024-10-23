@@ -43,38 +43,45 @@ def get_api_key(api_key: str = Security(api_key_header)):
 
 @app.post("/chat", dependencies=[Security(get_api_key)])
 async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
-    try:
-        llm = ChatBedrock(streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID"))
-        llm = llm.bind_tools(
-            [
-                get_available_services,
-                get_aws_health,
-                get_aws_health_history,
-                get_nth_ping_given_destination,
-                get_nth_ping_given_source,
-                get_pings,
-                search_duckduckgo,
-                url_loader,
-            ]
-        )
-        prompt_template = ChatPromptTemplate.from_messages(
-            [
-                SystemMessage(SYSTEM_PROMPT),
-                MessagesPlaceholder(variable_name="messages"),
-            ]
-        )
+    llm = ChatBedrock(streaming=True, model_id=os.getenv("BEDROCK_MODEL_ID"))
+    llm = llm.bind_tools(
+        [
+            get_available_services,
+            get_aws_health,
+            get_aws_health_history,
+            get_nth_ping_given_destination,
+            get_nth_ping_given_source,
+            get_pings,
+            search_duckduckgo,
+            url_loader,
+        ]
+    )
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="messages"),
+        ]
+    )
 
-        def init_history(session_id: str) -> DynamoDBChatMessageHistory:
-            return DynamoDBChatMessageHistory(table_name=TABLE_NAME, session_id=session_id)
+    def init_history(session_id: str) -> DynamoDBChatMessageHistory:
+        try:
+            return DynamoDBChatMessageHistory(
+                table_name=TABLE_NAME, session_id=session_id
+            )
+        except Exception as e:
+            print(e)
 
-        chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
+            raise
 
-        inference = partial(
-            chain.astream,
-            config={"configurable": {"session_id": chat_request.session_id}},
-        )
+    chain = RunnableWithMessageHistory(prompt_template | llm, init_history)
 
-        async def get_response() -> AsyncGenerator[str, None]:
+    inference = partial(
+        chain.astream,
+        config={"configurable": {"session_id": chat_request.session_id}},
+    )
+
+    async def get_response() -> AsyncGenerator[str, None]:
+        try:
             time_stamp = MESSAGE_TIME_STAMP.format(
                 chat_request.time, await convert_to_utc(chat_request.time)
             )
@@ -121,75 +128,118 @@ async def chat_api(chat_request: chat_request_model) -> StreamingResponse:
                         )
                 else:
                     break
+        except Exception as e:
+            print(e)
 
-        return StreamingResponse(
-            get_response(),
-            media_type="text/plain",
-        )
-    except Exception:
-        return "<|generation_error|>"
+            dynamodb = boto3.resource("dynamodb")
+            table = dynamodb.Table(TABLE_NAME)
+
+            try:
+                response = table.get_item(Key={"SessionId": chat_request.session_id})
+
+                if "Item" in response:
+                    history = response["Item"].get("history", [])
+
+                    for i in range(len(history) - 1, -1, -1):
+                        if history[i]["M"]["type"]["S"] == "human":
+                            history = history[:i]
+                            break
+
+                    table.update_item(
+                        Key={"SessionId": chat_request.session_id},
+                        UpdateExpression="set History = :h",
+                        ExpressionAttributeValues={":h": history},
+                    )
+            except Exception as e:
+                print(e)
+
+                pass
+
+            yield "<|generation_error|>"
+
+    return StreamingResponse(
+        get_response(),
+        media_type="text/plain",
+    )
 
 
 @app.post("/get-history", dependencies=[Security(get_api_key)])
 async def get_history_api(history_request: history_request_model):
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
+    try:
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(TABLE_NAME)
 
-    history = table.get_item(Key={"SessionId": history_request.session_id})
+        history = table.get_item(Key={"SessionId": history_request.session_id})
 
-    if "Item" in history:
-        filtered_history = [
-            {"type": entry["type"], "content": entry["data"]["content"]}
-            for entry in history["Item"]["History"]
-        ]
-        return filtered_history
+        if "Item" in history:
+            filtered_history = [
+                {"type": entry["type"], "content": entry["data"]["content"]}
+                for entry in history["Item"]["History"]
+            ]
+            return filtered_history
+        else:
+            raise Exception(f"Session history {history_request.session_id} not found")
 
-    raise HTTPException(
-        status_code=404,
-        detail=f"Session history {history_request.session_id} not found",
-    )
+    except Exception as e:
+        print(e)
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
 
 
 @app.post("/delete-history", dependencies=[Security(get_api_key)])
 async def delete_history_api(history_request: history_request_model):
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
+    try:
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(TABLE_NAME)
 
-    table.delete_item(Key={"SessionId": history_request.session_id})
+        table.delete_item(Key={"SessionId": history_request.session_id})
 
-    response = table.get_item(Key={"SessionId": history_request.session_id})
+        response = table.get_item(Key={"SessionId": history_request.session_id})
 
-    if "Item" in response:
-        return HTTPException(
+        if "Item" in response:
+            raise Exception(
+                f"Error deleting session history {history_request.session_id}"
+            )
+
+        return Response(status_code=204)
+    except Exception as e:
+        print(e)
+
+        raise HTTPException(
             status_code=409,
-            detail=f"Error deleting session history {history_request.session_id}",
+            detail=str(e),
         )
-
-    return Response(status_code=204)
 
 
 @app.post("/generate-title", dependencies=[Security(get_api_key)])
 async def generate_title_api(history_request: history_request_model):
-    llm = ChatBedrock(model_id=os.getenv("BEDROCK_MODEL_ID"))
-    llm = llm.with_structured_output(title_response_model)
-
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(GENERATE_TITLE_SYSTEM_PROMPT),
-            MessagesPlaceholder(variable_name="history"),
-        ]
-    )
-
-    chain = prompt_template | llm
-
     try:
+        llm = ChatBedrock(model_id=os.getenv("BEDROCK_MODEL_ID"))
+        llm = llm.with_structured_output(title_response_model)
+
+        prompt_template = ChatPromptTemplate.from_messages(
+            [
+                SystemMessage(GENERATE_TITLE_SYSTEM_PROMPT),
+                MessagesPlaceholder(variable_name="history"),
+            ]
+        )
+
+        chain = prompt_template | llm
+
         history = str(await get_history_api(history_request))
-    except HTTPException as e:
-        raise e
 
-    response: title_response_model = chain.invoke({"history": [HumanMessage(history)]})
+        response: title_response_model = chain.invoke(
+            {"history": [HumanMessage(history)]}
+        )
 
-    return response.title
+        return response.title
+    except Exception as e:
+        print(e)
+
+        return "New chat"
 
 
 @app.get("/")
